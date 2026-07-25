@@ -30,6 +30,12 @@ def _nested(data: dict[str, Any], key: str) -> list:
     return data.get(key) if isinstance(data.get(key), list) else []
 
 
+def _payload(data: dict[str, Any]) -> dict:
+    """Return the inner data object of a Scavio response envelope, or the response itself."""
+    inner = data.get("data")
+    return inner if isinstance(inner, dict) else data
+
+
 @app.tool(requires_secrets=["SCAVIO_API_KEY"])
 async def search_google(
     context: Context,
@@ -77,6 +83,53 @@ async def search_youtube(
     async with _client(context) as client:
         data = await client.youtube.search(query)
     return _nested(data, "results")[:max_results]
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_youtube_video(
+    context: Context,
+    video_id: Annotated[str, "YouTube video id or a full watch URL"],
+) -> Annotated[dict, "YouTube video details"]:
+    """Fetch full details for a YouTube video (title, author, view count, description, captions) with Scavio."""
+    async with _client(context) as client:
+        data = await client.youtube.video(video_id)
+    return _payload(data)
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_youtube_transcript(
+    context: Context,
+    video_id: Annotated[str, "YouTube video id or a full watch URL"],
+    language: Annotated[str, "Transcript language code"] = "en",
+    format: Annotated[str, "'text' for a plain transcript, 'srt' for timed subtitles"] = "text",
+) -> Annotated[dict, "YouTube video transcript"]:
+    """Fetch a YouTube video's transcript or timed subtitles with Scavio."""
+    async with _client(context) as client:
+        data = await client.youtube.transcript(video_id, language=language, format=format)
+    return _payload(data)
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def list_youtube_comments(
+    context: Context,
+    video_id: Annotated[str, "YouTube video id or a full watch URL"],
+    max_results: Annotated[int, "Maximum number of comments"] = 10,
+) -> Annotated[list[dict], "YouTube video comments"]:
+    """List comments on a YouTube video with Scavio."""
+    async with _client(context) as client:
+        data = await client.youtube.comments(video_id)
+    return _nested(data, "comments")[:max_results]
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_youtube_channel(
+    context: Context,
+    channel_id: Annotated[str, "YouTube channel id, @handle, or channel URL"],
+) -> Annotated[dict, "YouTube channel details"]:
+    """Fetch a YouTube channel's details (subscribers, video count, views, links) with Scavio."""
+    async with _client(context) as client:
+        data = await client.youtube.channel(channel_id)
+    return _payload(data)
 
 
 @app.tool(requires_secrets=["SCAVIO_API_KEY"])
