@@ -16,7 +16,7 @@ from typing import Annotated, Any
 from arcade_mcp_server import Context, MCPApp
 from scavio import AsyncScavioClient
 
-app = MCPApp(name="scavio", version="0.1.0")
+app = MCPApp(name="scavio", version="0.1.1")
 
 
 def _client(context: Context) -> AsyncScavioClient:
@@ -70,7 +70,7 @@ async def search_reddit(
     """Search Reddit posts for community discussion and sentiment with Scavio."""
     async with _client(context) as client:
         data = await client.reddit.search(query)
-    return _nested(data, "posts")[:max_results]
+    return _nested(data, "results")[:max_results]
 
 
 @app.tool(requires_secrets=["SCAVIO_API_KEY"])
