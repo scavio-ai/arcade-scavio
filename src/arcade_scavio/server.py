@@ -1,8 +1,10 @@
 """Scavio real-time search tools for Arcade.dev / MCP.
 
 Exposes Scavio's search across Google, Google News, Reddit, YouTube, and Amazon
-as Arcade tools. The Scavio API key is injected securely by Arcade at call time
-via the SCAVIO_API_KEY secret (the client and LLM never see it).
+as Arcade tools, plus `extract_url` — the agent's read-this-page primitive,
+which works on any URL rather than a platform. The Scavio API key is injected
+securely by Arcade at call time via the SCAVIO_API_KEY secret (the client and
+LLM never see it).
 
 Run standalone:
     uv run server.py            # stdio
@@ -16,7 +18,7 @@ from typing import Annotated, Any
 from arcade_mcp_server import Context, MCPApp
 from scavio import AsyncScavioClient
 
-app = MCPApp(name="scavio", version="0.1.2")
+app = MCPApp(name="scavio", version="0.2.0")
 
 
 def _client(context: Context) -> AsyncScavioClient:
@@ -34,6 +36,38 @@ def _payload(data: dict[str, Any]) -> dict:
     """Return the inner data object of a Scavio response envelope, or the response itself."""
     inner = data.get("data")
     return inner if isinstance(inner, dict) else data
+
+
+# Registered first on purpose: `extract_url` is the read-this-page primitive an
+# agent reaches for most, and it is the only tool here that is not tied to a
+# platform. `extract` is a TOP-LEVEL method on the client, never a namespace --
+# client.extract(url), not client.extract.extract().
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def extract_url(
+    context: Context,
+    url: Annotated[str, "The page to read. http(s) only; a bare host is upgraded to https"],
+    format: Annotated[
+        str,
+        "'markdown' (default) is a readability extraction with the page chrome stripped, "
+        "'text' is that flattened to plain text, 'html' is the raw page",
+    ] = "markdown",
+    mode: Annotated[
+        str,
+        "Fetch tier, and the parameter that sets the price: 'normal' (default) is a plain "
+        "fetch and costs 1 credit, 'advanced' renders the page in a browser for JS-built "
+        "sites and costs 1, 'ultra' routes through residential proxies for the hardest bot "
+        "walls and costs 2. Start on 'normal'",
+    ] = "normal",
+) -> Annotated[dict, "The page as {url, format, mode, content, content_length}"]:
+    """Read any web page with Scavio and return it as clean Markdown, plain text, or raw HTML.
+
+    Use this on any URL, including one returned by the search tools. Billing is
+    tier-priced by `mode` rather than flat, and only a successful read is
+    charged: a dead link, a bot wall or a timeout costs nothing.
+    """
+    async with _client(context) as client:
+        data = await client.extract(url, format=format, mode=mode)
+    return _payload(data)
 
 
 @app.tool(requires_secrets=["SCAVIO_API_KEY"])
