@@ -20,7 +20,7 @@ This toolkit is a **curated subset** of the Scavio API, not a wrapper around all
 | `search_reddit` | `POST /api/v1/reddit/search` | Reddit | 1 |
 | `search_youtube` | `POST /api/v1/youtube/search` | YouTube | 2 |
 | `get_youtube_video` | `POST /api/v1/youtube/video` | YouTube | 1 |
-| `get_youtube_transcript` | `POST /api/v1/youtube/transcript` | YouTube | 8 |
+| `get_youtube_transcript` | `POST /api/v1/youtube/transcript` | YouTube | 5 |
 | `list_youtube_comments` | `POST /api/v1/youtube/comments` | YouTube | 1 |
 | `get_youtube_channel` | `POST /api/v1/youtube/channel` | YouTube | 1 |
 | `search_amazon` | `POST /api/v1/amazon/search` | Amazon | 1 |
@@ -42,13 +42,13 @@ Each tool reads the `SCAVIO_API_KEY` secret, which Arcade injects securely at ca
 
 ## Credits
 
-**This toolkit is not flat 1 credit.** Seven of the search tools cost 1, `search_youtube` costs 2, `get_youtube_transcript` costs **8**, and `extract_url` is priced by the tier you ask for rather than per call.
+**This toolkit is not flat 1 credit.** Seven of the search tools cost 1, `search_youtube` costs 2, `get_youtube_transcript` costs **5**, and `extract_url` is priced by the tier you ask for rather than per call.
 
 | Tool | Credits |
 |---|---|
 | `search_google`, `search_news`, `search_reddit`, `get_youtube_video`, `list_youtube_comments`, `get_youtube_channel`, `search_amazon` | 1 |
 | `search_youtube` | 2 |
-| `get_youtube_transcript` | 8 |
+| `get_youtube_transcript` | 5 |
 | `extract_url` | **1** on `mode="normal"`, **1** on `"advanced"`, **2** on `"ultra"` |
 | `map_website` | **1** on `normal`; up to 2 on `advanced`, up to 10 on `ultra` |
 | `crawl_website`, `batch_extract` | per successful page: **1** on `normal` or `advanced`, **2** on `ultra` |
