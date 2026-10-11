@@ -2,7 +2,7 @@
 
 The Scavio SDK client is replaced with a fake, so nothing here needs an API key
 or a network. The point of these tests is twofold: prove the wire calls are the
-ones the canonical API expects, and pin the curated surface at exactly 10 tools
+ones the canonical API expects, and pin the curated surface at exactly 15 tools
 so it cannot grow without the README's counts and credit table being updated too.
 """
 
@@ -25,6 +25,12 @@ TOOL_NAMES = {
     "Scavio.ListYoutubeComments",
     "Scavio.GetYoutubeChannel",
     "Scavio.SearchAmazon",
+    # The Extract family's multi-page members.
+    "Scavio.MapWebsite",
+    "Scavio.CrawlWebsite",
+    "Scavio.GetCrawlStatus",
+    "Scavio.BatchExtract",
+    "Scavio.GetBatchStatus",
 }
 
 
@@ -60,12 +66,7 @@ class _FakeClient:
             setattr(self, ns, _Namespace(_FakeClient.calls, _FakeClient.responses))
         _FakeClient.last = self
 
-    # extract is a TOP-LEVEL method on the client, never a namespace, so it is a
-    # plain method here. A tool that called client.extract.extract() would hit a
-    # coroutine function with no attributes and blow up, which is the point.
-    async def extract(self, url: str, **kwargs: Any) -> dict:
-        _FakeClient.calls.append(("extract", (url,), kwargs))
-        return _FakeClient.responses.get("extract", {"data": {}})
+        self.extract = _FakeExtract()
 
     async def __aenter__(self) -> "_FakeClient":
         return self
@@ -76,6 +77,48 @@ class _FakeClient:
     def __getattr__(self, name: str):
         msg = f"curated surface: {name} is not exposed by arcade-scavio"
         raise AssertionError(msg)
+
+
+class _FakeExtract:
+    """client.extract: CALLABLE for one page (scavio >= 0.23), with map, crawl and
+    batch methods hanging off it. It has no `extract` attribute, so a tool that
+    called client.extract.extract() blows up here, which is the point.
+
+    Status calls pop from `responses["status_queue"]` when staged, else answer a
+    completed job.
+    """
+
+    async def __call__(self, url: str, **kwargs: Any) -> dict:
+        _FakeClient.calls.append(("extract", (url,), kwargs))
+        return _FakeClient.responses.get("extract", {"data": {}})
+
+    def _record(self, name: str, args: tuple, kwargs: dict) -> None:
+        _FakeClient.calls.append((f"extract.{name}", args, kwargs))
+
+    async def map(self, url: str, **kwargs: Any) -> dict:
+        self._record("map", (url,), kwargs)
+        return {"data": {"url": url, "links": [{"url": url, "source": "page"}], "returned": 1}, "credits_used": 1}
+
+    async def crawl(self, url: str, **kwargs: Any) -> dict:
+        self._record("crawl", (url,), kwargs)
+        return {"data": {"id": "crawl_1", "status": "queued"}, "credits_used": 0}
+
+    async def batch(self, urls: list, **kwargs: Any) -> dict:
+        self._record("batch", (urls,), kwargs)
+        return {"data": {"id": "batch_1", "status": "queued"}, "credits_used": 0}
+
+    async def _status(self, name: str, job_id: str, kwargs: dict) -> dict:
+        self._record(name, (job_id,), kwargs)
+        queue = _FakeClient.responses.get("status_queue")
+        if queue:
+            return queue.pop(0)
+        return {"data": {"id": job_id, "status": "completed", "results": [{"url": "u", "content": "c"}], "next_cursor": None}}
+
+    async def crawl_status(self, job_id: str, **kwargs: Any) -> dict:
+        return await self._status("crawl_status", job_id, kwargs)
+
+    async def batch_status(self, job_id: str, **kwargs: Any) -> dict:
+        return await self._status("batch_status", job_id, kwargs)
 
 
 class _FakeContext:
@@ -101,10 +144,11 @@ def _last_call() -> tuple:
 # --- curated-surface guards ------------------------------------------------
 
 
-def test_surface_is_exactly_ten_tools():
-    """9 endpoints across Google (2), YouTube (5), Reddit (1), Amazon (1), plus extract."""
+def test_surface_is_exactly_fifteen_tools():
+    """9 endpoints across Google (2), YouTube (5), Reddit (1), Amazon (1), plus the
+    Extract family: extract, map, crawl + status, batch + status."""
     catalog = server.app._catalog
-    assert catalog.get_tool_count() == 10
+    assert catalog.get_tool_count() == 15
     assert {str(n) for n in catalog.get_tool_names()} == TOOL_NAMES
 
 
@@ -144,7 +188,7 @@ def test_app_version_matches_the_package():
 
     pyproject = (pathlib.Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
     declared = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-    assert server.app.version == declared == "0.2.0"
+    assert server.app.version == declared == "0.3.0"
 
 
 # --- wire-format tests -----------------------------------------------------
@@ -263,3 +307,73 @@ async def test_extract_unwraps_the_data_envelope_and_keeps_the_page_whole(ctx):
 async def test_api_key_comes_from_the_arcade_secret(ctx):
     await server.search_google(ctx, "x")
     assert _FakeClient.last.api_key == "sk_live_test"
+
+
+# --- map, crawl and batch --------------------------------------------------
+
+
+def _job(status: str) -> dict:
+    return {"data": {"id": "crawl_1", "status": status, "results": [], "next_cursor": None}}
+
+
+@pytest.fixture
+def fast(monkeypatch):
+    monkeypatch.setattr(server, "JOB_POLL_INTERVAL", 0.0)
+
+
+async def test_map_website_calls_extract_map_and_drops_none(ctx):
+    result = await server.map_website(ctx, "scavio.dev", limit=3, include_paths=["/blog/**"])
+    assert _last_call() == ("extract.map", ("scavio.dev",), {"limit": 3, "include_paths": ["/blog/**"]})
+    assert result["returned"] == 1
+    assert "credits_used" not in result
+
+
+async def test_crawl_website_waits_until_completed(ctx, fast):
+    _FakeClient.responses["status_queue"] = [_job("running"), _job("completed"), _job("completed")]
+    result = await server.crawl_website(ctx, "https://hono.dev/docs", max_pages=2)
+    calls = _FakeClient.calls
+    assert calls[0] == ("extract.crawl", ("https://hono.dev/docs",), {"max_pages": 2})
+    assert calls[1] == ("extract.crawl_status", ("crawl_1",), {"limit": 1, "include_content": False})
+    assert calls[-1] == ("extract.crawl_status", ("crawl_1",), {"limit": 10})
+    assert len(calls) == 4
+    assert result["status"] == "completed"
+
+
+async def test_crawl_website_wait_zero_returns_the_queued_job(ctx):
+    result = await server.crawl_website(ctx, "https://hono.dev/docs", wait_seconds=0)
+    assert len(_FakeClient.calls) == 1
+    assert result == {"id": "crawl_1", "status": "queued"}
+
+
+async def test_crawl_website_stops_waiting_when_time_runs_out(ctx, fast, monkeypatch):
+    ticks = iter(range(0, 10_000, 10))
+    monkeypatch.setattr(server.time, "monotonic", lambda: float(next(ticks)))
+    _FakeClient.responses["status_queue"] = [_job("running")] * 5
+    result = await server.crawl_website(ctx, "https://hono.dev/docs", wait_seconds=15)
+    assert result["status"] == "running"
+    assert len(_FakeClient.calls) == 3  # start, one probe, final read
+
+
+async def test_get_crawl_status_passes_paging_through(ctx):
+    await server.get_crawl_status(ctx, "crawl_1", cursor="25", include_content=False)
+    assert _last_call() == ("extract.crawl_status", ("crawl_1",), {"cursor": "25", "limit": 10, "include_content": False})
+
+
+async def test_batch_extract_and_status_use_the_batch_job(ctx, fast):
+    urls = ["https://example.com/", "https://hono.dev/docs"]
+    result = await server.batch_extract(ctx, urls, mode="normal")
+    assert _FakeClient.calls[0] == ("extract.batch", (urls,), {"mode": "normal"})
+    assert all(c[0] == "extract.batch_status" for c in _FakeClient.calls[1:])
+    assert result["status"] == "completed"
+    await server.get_batch_status(ctx, "batch_1", status="failed")
+    assert _last_call() == ("extract.batch_status", ("batch_1",), {"limit": 10, "status": "failed"})
+
+
+def test_descriptions_never_name_the_fetch_method():
+    banned = ("proxy", "proxies", "residential", "datacenter", "headless", "browser")
+    catalog = server.app._catalog
+    for name in catalog.get_tool_names():
+        definition = catalog.get_tool_by_name(str(name)).definition
+        text = definition.model_dump_json().lower()
+        for word in banned:
+            assert word not in text, (str(name), word)

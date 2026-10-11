@@ -1,15 +1,15 @@
 [project]
 name = "arcade-scavio"
-version = "0.2.0"
-description = "Scavio real-time search and URL extraction tools (Google, Google News, Reddit, YouTube, Amazon, extract) for Arcade.dev / MCP"
+version = "0.3.0"
+description = "Scavio real-time search and URL extraction tools (Google, Google News, Reddit, YouTube, Amazon, extract, website map, crawl and batch) for Arcade.dev / MCP"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Scavio", email = "support@scavio.dev" }]
-keywords = ["arcade", "arcade-ai", "mcp", "scavio", "search", "serp", "tools", "extract", "web-scraping", "tavily-alternative"]
+keywords = ["arcade", "arcade-ai", "mcp", "scavio", "search", "serp", "tools", "extract", "web-crawler", "sitemap", "web-scraping", "tavily-alternative"]
 dependencies = [
     "arcade-mcp-server>=1.17.4,<2.0.0",
-    "scavio>=0.15.0",
+    "scavio>=0.23.0",
 ]
 
 [project.optional-dependencies]
