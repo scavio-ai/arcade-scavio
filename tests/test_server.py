@@ -188,7 +188,7 @@ def test_app_version_matches_the_package():
 
     pyproject = (pathlib.Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
     declared = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-    assert server.app.version == declared == "0.3.1"
+    assert server.app.version == declared == "0.3.2"
 
 
 # --- wire-format tests -----------------------------------------------------
