@@ -22,7 +22,7 @@ from typing import Annotated, Any
 from arcade_mcp_server import Context, MCPApp
 from scavio import AsyncScavioClient
 
-app = MCPApp(name="scavio", version="0.3.2")
+app = MCPApp(name="scavio", version="0.4.0")
 
 
 def _client(context: Context) -> AsyncScavioClient:
