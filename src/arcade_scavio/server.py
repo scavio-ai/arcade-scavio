@@ -181,6 +181,92 @@ async def search_amazon(
     return _nested(data, "products")[:max_results]
 
 
+# --- HEB grocery ----------------------------------------------------------
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def search_heb(
+    context: Context,
+    query: Annotated[str, "Search query for HEB grocery products"],
+    page: Annotated[int | None, "Page number for pagination"] = None,
+    page_size: Annotated[int | None, "Results per page, max 60 (default 30)"] = None,
+    max_results: Annotated[int, "Maximum number of results to return"] = 10,
+) -> Annotated[list[dict], "HEB grocery product search results"]:
+    """Search HEB grocery products by keyword with Scavio."""
+    async with _client(context) as client:
+        data = await client.heb.search(query, **_clean({"page": page, "page_size": page_size}))
+    return _nested(data, "products")[:max_results]
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_heb_product(
+    context: Context,
+    product_url: Annotated[str | None, "Full HEB product URL (preferred)"] = None,
+    product_id: Annotated[str | None, "HEB product id (requires slug)"] = None,
+    slug: Annotated[str | None, "Product URL slug (required with product_id)"] = None,
+) -> Annotated[dict, "HEB product details"]:
+    """Fetch full details for an HEB grocery product with Scavio.
+
+    Pass a product_url for the simplest lookup, or product_id + slug together.
+    """
+    async with _client(context) as client:
+        data = await client.heb.product(
+            **_clean({"product_url": product_url, "product_id": product_id, "slug": slug})
+        )
+    return _payload(data)
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_heb_stores(
+    context: Context,
+    zip: Annotated[str | None, "5-digit US ZIP code"] = None,
+    city: Annotated[str | None, "City name (e.g. 'Austin')"] = None,
+) -> Annotated[list[dict], "HEB store locations"]:
+    """Find HEB store locations by ZIP code or city with Scavio."""
+    async with _client(context) as client:
+        data = await client.heb.stores(**_clean({"zip": zip, "city": city}))
+    return _nested(data, "stores")
+
+
+# --- Kroger grocery -------------------------------------------------------
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def search_kroger(
+    context: Context,
+    query: Annotated[str, "Search query for Kroger grocery products"],
+    page: Annotated[int | None, "Page number for pagination"] = None,
+    max_results: Annotated[int, "Maximum number of results to return"] = 10,
+) -> Annotated[list[dict], "Kroger grocery product search results"]:
+    """Search Kroger grocery products by keyword with Scavio.
+
+    Kroger operates Kroger, Ralphs, Fred Meyer, Harris Teeter, King Soopers,
+    Fry's and other banners.
+    """
+    async with _client(context) as client:
+        data = await client.kroger.search(query, **_clean({"page": page}))
+    return _nested(data, "products")[:max_results]
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_kroger_product(
+    context: Context,
+    product_url: Annotated[str | None, "Full Kroger product URL (preferred)"] = None,
+    upc: Annotated[str | None, "Product UPC code"] = None,
+    slug: Annotated[str | None, "Product URL slug"] = None,
+) -> Annotated[dict, "Kroger product details"]:
+    """Fetch full details for a Kroger grocery product with Scavio.
+
+    Pass a product_url for the simplest lookup, or upc/slug.
+    Covers all Kroger banners (Ralphs, Fred Meyer, Harris Teeter, etc.).
+    """
+    async with _client(context) as client:
+        data = await client.kroger.product(
+            **_clean({"product_url": product_url, "upc": upc, "slug": slug})
+        )
+    return _payload(data)
+
+
 # --- map, crawl and batch: the multi-page members of the Extract family -----
 #
 # Map answers in one call. Crawl and batch run as background jobs: the start

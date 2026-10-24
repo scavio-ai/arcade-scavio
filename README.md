@@ -1,6 +1,6 @@
 # arcade-scavio
 
-[Scavio](https://scavio.dev) real-time search and page-extraction tools for [Arcade.dev](https://arcade.dev) and MCP — Google, Google News, Reddit, YouTube, Amazon, `extract_url` (read any web page), and tools to map a site's URLs, crawl a whole site, and batch-extract a URL list, with one API key. A cost-effective [Tavily alternative](https://scavio.dev/docs) and [SerpAPI alternative](https://scavio.dev/docs) for Arcade agents.
+[Scavio](https://scavio.dev) real-time search and page-extraction tools for [Arcade.dev](https://arcade.dev) and MCP — Google, Google News, Reddit, YouTube, Amazon, HEB, Kroger, `extract_url` (read any web page), and tools to map a site's URLs, crawl a whole site, and batch-extract a URL list, with one API key. A cost-effective [Tavily alternative](https://scavio.dev/docs) and [SerpAPI alternative](https://scavio.dev/docs) for Arcade agents.
 
 ## Install
 
@@ -10,7 +10,7 @@ pip install arcade-scavio
 
 ## Scope: 15 tools, by design
 
-This toolkit is a **curated subset** of the Scavio API, not a wrapper around all of it. It exposes **15** tools — 9 endpoints across **4** of Scavio's 31 platforms, plus the core Extract family, which belongs to no platform: `extract_url` for one page, and map, crawl and batch for whole sites:
+This toolkit is a **curated subset** of the Scavio API, not a wrapper around all of it. It exposes **20** tools — 14 endpoints across **6** of Scavio's 33 platforms, plus the core Extract family, which belongs to no platform: `extract_url` for one page, and map, crawl and batch for whole sites:
 
 | Tool | Endpoint | Platform | Credits |
 |---|---|---|---|
@@ -24,13 +24,18 @@ This toolkit is a **curated subset** of the Scavio API, not a wrapper around all
 | `list_youtube_comments` | `POST /api/v1/youtube/comments` | YouTube | 1 |
 | `get_youtube_channel` | `POST /api/v1/youtube/channel` | YouTube | 1 |
 | `search_amazon` | `POST /api/v1/amazon/search` | Amazon | 1 |
+| `search_heb` | `POST /api/v1/heb/search` | HEB | 2 |
+| `get_heb_product` | `POST /api/v1/heb/product` | HEB | 2 |
+| `get_heb_stores` | `POST /api/v1/heb/stores` | HEB | 2 |
+| `search_kroger` | `POST /api/v1/kroger/search` | Kroger | 2 |
+| `get_kroger_product` | `POST /api/v1/kroger/product` | Kroger | 2 |
 | `map_website` | `POST /api/v1/extract/map` | *(Extract)* | 1 on `normal` (up to 2 / 10 on `advanced` / `ultra`) |
 | `crawl_website` | `POST /api/v1/extract/crawl` | *(Extract)* | per successful page, 1 / 1 / 2 by `mode` |
 | `get_crawl_status` | `GET /api/v1/extract/crawl/{id}` | *(Extract)* | free |
 | `batch_extract` | `POST /api/v1/extract/batch` | *(Extract)* | per successful page, 1 / 1 / 2 by `mode` |
 | `get_batch_status` | `GET /api/v1/extract/batch/{id}` | *(Extract)* | free |
 
-Platforms covered here: **Google (2), YouTube (5), Reddit (1), Amazon (1)**, plus `extract_url`, which is tied to no platform — it reads any URL. Not covered: Walmart, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Target, Home Depot, Zillow, Redfin, Booking, Airbnb, Tripadvisor, Yelp, Indeed, Glassdoor, the App Store, Google Play, SEC, Companies House, G2, Capterra, Google Ads, Meta Ad Library, Threads, Kuaishou, and the other 12 Google v2 verticals (Maps, Shopping, Flights, Hotels, Trends, AI Mode, ...). That is deliberate — a hand-picked toolkit an agent routes correctly beats a hundred near-identical tools — and it stays that way.
+Platforms covered here: **Google (2), YouTube (5), Reddit (1), Amazon (1), HEB (3), Kroger (2)**, plus `extract_url`, which is tied to no platform — it reads any URL. Not covered: Walmart, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Target, Home Depot, Zillow, Redfin, Booking, Airbnb, Tripadvisor, Yelp, Indeed, Glassdoor, the App Store, Google Play, SEC, Companies House, G2, Capterra, Google Ads, Meta Ad Library, Threads, Kuaishou, and the other 12 Google v2 verticals (Maps, Shopping, Flights, Hotels, Trends, AI Mode, ...). That is deliberate — a hand-picked toolkit an agent routes correctly beats a hundred near-identical tools — and it stays that way.
 
 ### Map, crawl and batch
 
@@ -42,12 +47,12 @@ Each tool reads the `SCAVIO_API_KEY` secret, which Arcade injects securely at ca
 
 ## Credits
 
-**This toolkit is not flat 1 credit.** Seven of the search tools cost 1, `search_youtube` costs 2, `get_youtube_transcript` costs **5**, and `extract_url` is priced by the tier you ask for rather than per call.
+**This toolkit is not flat 1 credit.** Seven of the core tools cost 1, `search_youtube` costs 2, `get_youtube_transcript` costs **5**, all HEB and Kroger tools cost **2**, and `extract_url` is priced by the tier you ask for rather than per call.
 
 | Tool | Credits |
 |---|---|
 | `search_google`, `search_news`, `search_reddit`, `get_youtube_video`, `list_youtube_comments`, `get_youtube_channel`, `search_amazon` | 1 |
-| `search_youtube` | 2 |
+| `search_youtube`, `search_heb`, `get_heb_product`, `get_heb_stores`, `search_kroger`, `get_kroger_product` | 2 |
 | `get_youtube_transcript` | 5 |
 | `extract_url` | **1** on `mode="normal"`, **1** on `"advanced"`, **2** on `"ultra"` |
 | `map_website` | **1** on `normal`; up to 2 on `advanced`, up to 10 on `ultra` |
@@ -77,11 +82,11 @@ Arcade discovers the `SCAVIO_API_KEY` secret and hosts it encrypted; the Arcade 
 
 ## Every endpoint via MCP
 
-Need Walmart, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Zillow, Booking, Indeed, the App Store, SEC filings, Maps, Shopping, Flights or Hotels? Scavio runs a hosted MCP server at `https://mcp.scavio.dev/mcp` that exposes **191 tools** across all 195 endpoints, authenticated with an `x-api-key` header — no install, no toolkit to deploy. See the [MCP docs](https://scavio.dev/docs/mcp).
+Need Walmart, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Zillow, Booking, Indeed, the App Store, SEC filings, Maps, Shopping, Flights or Hotels? Scavio runs a hosted MCP server at `https://mcp.scavio.dev/mcp` that exposes **191 tools** across all 200+ endpoints, authenticated with an `x-api-key` header — no install, no toolkit to deploy. See the [MCP docs](https://scavio.dev/docs/mcp).
 
 ## About Scavio
 
-[Scavio](https://scavio.dev) is a real-time search API built for AI agents — a unified API over **Google, YouTube, Amazon, Walmart, Reddit, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Target, Home Depot, Zillow, Redfin, Booking, Airbnb, Tripadvisor, Yelp, Indeed, Glassdoor, the App Store, Google Play, SEC, Companies House, G2, Capterra, Google Ads, Meta Ad Library, Threads and Kuaishou** that returns clean JSON, plus `extract` to read any URL. 195 live endpoints across 31 platforms, one key. A broader, cost-effective [Tavily alternative](https://scavio.dev/docs) and [SerpAPI alternative](https://scavio.dev/docs). See the [Arcade integration docs](https://scavio.dev/docs/arcade).
+[Scavio](https://scavio.dev) is a real-time search API built for AI agents — a unified API over **Google, YouTube, Amazon, Walmart, HEB, Kroger, Reddit, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Target, Home Depot, Zillow, Redfin, Booking, Airbnb, Tripadvisor, Yelp, Indeed, Glassdoor, the App Store, Google Play, SEC, Companies House, G2, Capterra, Google Ads, Meta Ad Library, Threads and Kuaishou** that returns clean JSON, plus `extract` to read any URL. 200+ live endpoints across 33 platforms, one key. A broader, cost-effective [Tavily alternative](https://scavio.dev/docs) and [SerpAPI alternative](https://scavio.dev/docs). See the [Arcade integration docs](https://scavio.dev/docs/arcade).
 
 ## Development
 
