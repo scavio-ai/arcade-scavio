@@ -267,6 +267,45 @@ async def get_kroger_product(
     return _payload(data)
 
 
+# --- Decathlon ---------------------------------------------------------------
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def search_decathlon(
+    context: Context,
+    query: Annotated[str, "Search query for Decathlon products"],
+    country: Annotated[str, "Country domain: 'fr', 'es', 'it', 'in', 'uk', 'pt' or 'net'"],
+    page: Annotated[int | None, "Page number for pagination"] = None,
+    max_results: Annotated[int, "Maximum number of results to return"] = 10,
+) -> Annotated[list[dict], "Decathlon product search results"]:
+    """Search Decathlon products by keyword with Scavio.
+
+    Supports 7 country domains: FR, ES, IT, IN, UK, PT and NET (international).
+    """
+    async with _client(context) as client:
+        data = await client.decathlon.search(query, country=country, **_clean({"page": page}))
+    return _nested(data, "products")[:max_results]
+
+
+@app.tool(requires_secrets=["SCAVIO_API_KEY"])
+async def get_decathlon_product(
+    context: Context,
+    country: Annotated[str, "Country domain: 'fr', 'es', 'it', 'in', 'uk', 'pt' or 'net'"],
+    product_url: Annotated[str | None, "Full Decathlon product URL (preferred)"] = None,
+    product_id: Annotated[str | None, "Decathlon numeric product ID"] = None,
+) -> Annotated[dict, "Decathlon product details"]:
+    """Fetch full details for a Decathlon product with Scavio.
+
+    Pass a product_url for the simplest lookup, or product_id.
+    Supports all 7 Decathlon country domains.
+    """
+    async with _client(context) as client:
+        data = await client.decathlon.product(
+            country=country, **_clean({"product_url": product_url, "product_id": product_id})
+        )
+    return _payload(data)
+
+
 # --- map, crawl and batch: the multi-page members of the Extract family -----
 #
 # Map answers in one call. Crawl and batch run as background jobs: the start
