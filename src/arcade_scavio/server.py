@@ -22,7 +22,7 @@ from typing import Annotated, Any
 from arcade_mcp_server import Context, MCPApp
 from scavio import AsyncScavioClient
 
-app = MCPApp(name="scavio", version="0.4.0")
+app = MCPApp(name="scavio", version="0.4.1")
 
 
 def _client(context: Context) -> AsyncScavioClient:
@@ -189,29 +189,49 @@ async def search_heb(
     context: Context,
     query: Annotated[str, "Search query for HEB grocery products"],
     page: Annotated[int | None, "Page number for pagination"] = None,
-    page_size: Annotated[int | None, "Results per page, max 60 (default 30)"] = None,
+    page_size: Annotated[int | None, "Results per page, 1-60. Defaults to 60."] = None,
+    store_id: Annotated[str | None, "HEB store number from get_heb_stores (store_number). Prices, stock, aisle location and assortment come from that store. US only. Omit for HEB's default store"] = None,
     max_results: Annotated[int, "Maximum number of results to return"] = 10,
 ) -> Annotated[list[dict], "HEB grocery product search results"]:
-    """Search HEB grocery products by keyword with Scavio."""
+    """Search HEB grocery products by keyword with Scavio.
+
+    With store_id, every row is priced at that store and carries `store` {store_id, name}.
+    """
     async with _client(context) as client:
-        data = await client.heb.search(query, **_clean({"page": page, "page_size": page_size}))
-    return _nested(data, "products")[:max_results]
+        data = await client.heb.search(
+            query, **_clean({"page": page, "page_size": page_size, "store_id": store_id})
+        )
+    rows = _nested(data, "products")[:max_results]
+    store = _payload(data).get("store")
+    if isinstance(store, dict):
+        rows = [{**row, "store": store} if isinstance(row, dict) else row for row in rows]
+    return rows
 
 
 @app.tool(requires_secrets=["SCAVIO_API_KEY"])
 async def get_heb_product(
     context: Context,
     product_url: Annotated[str | None, "Full HEB product URL (preferred)"] = None,
-    product_id: Annotated[str | None, "HEB product id (requires slug)"] = None,
-    slug: Annotated[str | None, "Product URL slug (required with product_id)"] = None,
+    product_id: Annotated[str | None, "HEB product id. Needs slug, unless store_id is set (then product_id alone works)"] = None,
+    slug: Annotated[str | None, "Product URL slug (required with product_id unless store_id is set)"] = None,
+    store_id: Annotated[str | None, "HEB store number from get_heb_stores (store_number). Prices, stock, aisle location and assortment come from that store. US only. Omit for HEB's default store"] = None,
 ) -> Annotated[dict, "HEB product details"]:
     """Fetch full details for an HEB grocery product with Scavio.
 
     Pass a product_url for the simplest lookup, or product_id + slug together.
+    With store_id the price, stock and aisle location are that store's, product_id
+    alone is enough, and the store used is echoed in `store` {store_id, name}.
     """
     async with _client(context) as client:
         data = await client.heb.product(
-            **_clean({"product_url": product_url, "product_id": product_id, "slug": slug})
+            **_clean(
+                {
+                    "product_url": product_url,
+                    "product_id": product_id,
+                    "slug": slug,
+                    "store_id": store_id,
+                }
+            )
         )
     return _payload(data)
 

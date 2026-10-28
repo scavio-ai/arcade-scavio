@@ -35,6 +35,8 @@ This toolkit is a **curated subset** of the Scavio API, not a wrapper around all
 | `batch_extract` | `POST /api/v1/extract/batch` | *(Extract)* | per successful page, 1 / 1 / 2 by `mode` |
 | `get_batch_status` | `GET /api/v1/extract/batch/{id}` | *(Extract)* | free |
 
+HEB store pricing: `search_heb` and `get_heb_product` take an optional `store_id` (the `store_number` from `get_heb_stores`) for that store's prices, stock and aisle location; the store used comes back as `store` {`store_id`, `name`}. With `store_id`, `get_heb_product` needs only `product_id`.
+
 Platforms covered here: **Google (2), YouTube (5), Reddit (1), Amazon (1), HEB (3), Kroger (2)**, plus `extract_url`, which is tied to no platform — it reads any URL. Not covered: Walmart, TikTok, TikTok Shop, Instagram, X, LinkedIn, eBay, Target, Home Depot, Zillow, Redfin, Booking, Airbnb, Tripadvisor, Yelp, Indeed, Glassdoor, the App Store, Google Play, SEC, Companies House, G2, Capterra, Google Ads, Meta Ad Library, Threads, Kuaishou, and the other 12 Google v2 verticals (Maps, Shopping, Flights, Hotels, Trends, AI Mode, ...). That is deliberate — a hand-picked toolkit an agent routes correctly beats a hundred near-identical tools — and it stays that way.
 
 ### Map, crawl and batch

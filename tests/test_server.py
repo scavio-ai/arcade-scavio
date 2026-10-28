@@ -62,7 +62,7 @@ class _FakeClient:
 
     def __init__(self, *_args: Any, api_key: str | None = None, **_kwargs: Any):
         self.api_key = api_key
-        for ns in ("google", "youtube", "amazon", "reddit"):
+        for ns in ("google", "youtube", "amazon", "reddit", "heb"):
             setattr(self, ns, _Namespace(_FakeClient.calls, _FakeClient.responses))
         _FakeClient.last = self
 
@@ -188,7 +188,7 @@ def test_app_version_matches_the_package():
 
     pyproject = (pathlib.Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
     declared = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-    assert server.app.version == declared == "0.3.2"
+    assert server.app.version == declared == "0.4.1"
 
 
 # --- wire-format tests -----------------------------------------------------
@@ -377,3 +377,18 @@ def test_descriptions_never_name_the_fetch_method():
         text = definition.model_dump_json().lower()
         for word in banned:
             assert word not in text, (str(name), word)
+
+
+async def test_heb_store_id_is_forwarded_and_echoed(ctx):
+    _FakeClient.responses["search"] = {
+        "data": {
+            "store": {"store_id": "441", "name": "Uvalde H-E-B"},
+            "products": [{"id": "314130", "price": 398}],
+        }
+    }
+    rows = await server.search_heb(ctx, "milk", store_id="441")
+    assert _last_call() == ("search", ("milk",), {"store_id": "441"})
+    assert rows == [{"id": "314130", "price": 398, "store": {"store_id": "441", "name": "Uvalde H-E-B"}}]
+
+    await server.get_heb_product(ctx, product_id="314130", store_id="441")
+    assert _last_call() == ("product", (), {"product_id": "314130", "store_id": "441"})

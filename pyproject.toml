@@ -1,6 +1,6 @@
 [project]
 name = "arcade-scavio"
-version = "0.4.0"
+version = "0.4.1"
 description = "Scavio real-time search and URL extraction tools (Google, Google News, Reddit, YouTube, Amazon, HEB, Kroger, extract, website map, crawl and batch) for Arcade.dev / MCP"
 readme = "README.md"
 requires-python = ">=3.10"
